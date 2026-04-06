@@ -1,0 +1,55 @@
+{
+  "expo": {
+    "name": "Localizer",
+    "slug": "stdv-localizer",
+    "version": "1.2.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F2F2F7"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Potrzebujemy dostępu do lokalizacji, aby pokazać Twoją pozycję na mapie.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Potrzebujemy dostępu do lokalizacji, aby udostępniać pozycję w czasie rzeczywistym.",
+        "UIBackgroundModes": ["location"]
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#F2F2F7"
+      },
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "REQUEST_INSTALL_PACKAGES"
+      ],
+      "package": "com.stdv.localizer"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Pozwól aplikacji na dostęp do lokalizacji.",
+          "locationAlwaysPermission": "Pozwól aplikacji na dostęp do lokalizacji w tle.",
+          "locationWhenInUsePermission": "Pozwól aplikacji na dostęp do lokalizacji podczas użytkowania.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ]
+    ]
+  }
+}
