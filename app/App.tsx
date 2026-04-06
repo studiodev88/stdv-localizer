@@ -22,11 +22,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 const WS_URL = "wss://localizer-backend.sebastian-drewniak.workers.dev/ws";
 const API_URL = "https://localizer-backend.sebastian-drewniak.workers.dev/api/location";
 const GITHUB_REPO = "studiodev88/stdv-localizer";
-const CURRENT_VERSION = "1.2.1";
+const CURRENT_VERSION = "1.2.2";
 const BACKGROUND_LOCATION_TASK = "background-location-task";
 
 const STORAGE_ROOM = "@localizer/room";
 const STORAGE_USER = "@localizer/user";
+const STORAGE_DEVICE_ID = "@localizer/deviceId";
 
 // --- LIGHT THEME ---
 const COLORS = {
@@ -57,6 +58,16 @@ function generateRoomCode(): string {
   return code;
 }
 
+// --- PERSISTENT DEVICE ID ---
+async function getDeviceId(): Promise<string> {
+  let id = await AsyncStorage.getItem(STORAGE_DEVICE_ID);
+  if (!id) {
+    id = "dev-" + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+    await AsyncStorage.setItem(STORAGE_DEVICE_ID, id);
+  }
+  return id;
+}
+
 // --- BACKGROUND LOCATION TASK ---
 TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) => {
   if (error) return;
@@ -64,7 +75,8 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
     try {
       const room = await AsyncStorage.getItem(STORAGE_ROOM);
       const user = await AsyncStorage.getItem(STORAGE_USER);
-      if (!room) return;
+      const deviceId = await AsyncStorage.getItem(STORAGE_DEVICE_ID);
+      if (!room || !deviceId) return;
 
       const loc = data.locations[0];
       await fetch(`${API_URL}/${room}`, {
@@ -74,7 +86,7 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
           lat: loc.coords.latitude,
           lng: loc.coords.longitude,
           name: user || "Anonim",
-          userId: `bg-${user || "anon"}`,
+          userId: deviceId,
         }),
       });
     } catch {}
@@ -286,7 +298,8 @@ export default function App() {
         setMyLocation(coords);
 
         const currentName = nameOverride !== undefined ? nameOverride : userName;
-        const ws = new WebSocket(`${WS_URL}/${code.toUpperCase()}`);
+        const deviceId = await getDeviceId();
+        const ws = new WebSocket(`${WS_URL}/${code.toUpperCase()}?userId=${encodeURIComponent(deviceId)}`);
         wsRef.current = ws;
 
         ws.onopen = () => {

@@ -10,7 +10,7 @@ export default {
       return new Response("ok", { status: 200 });
     }
 
-    // WebSocket: GET /ws/:roomCode
+    // WebSocket: GET /ws/:roomCode?userId=xxx
     const wsMatch = url.pathname.match(/^\/ws\/([a-zA-Z0-9_-]+)$/);
     if (wsMatch) {
       const roomCode = wsMatch[1].toUpperCase();
@@ -64,10 +64,13 @@ export class LocationRoom {
       return new Response("Expected WebSocket", { status: 426 });
     }
 
+    // Client sends userId as query param
+    const clientUserId = url.searchParams.get("userId");
+
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
 
-    this.handleWebSocket(server);
+    this.handleWebSocket(server, clientUserId);
 
     return new Response(null, { status: 101, webSocket: client });
   }
@@ -80,6 +83,17 @@ export class LocationRoom {
       }
 
       const userId = data.userId || `http-${data.name || "anon"}`;
+
+      // Update existing session's location if it matches userId
+      for (const s of this.sessions) {
+        if (s.userId === userId) {
+          s.lastLat = data.lat;
+          s.lastLng = data.lng;
+          s.lastTimestamp = Date.now();
+          s.name = data.name || s.name;
+        }
+      }
+
       const msg = JSON.stringify({
         type: "location",
         userId,
@@ -90,7 +104,9 @@ export class LocationRoom {
       });
 
       for (const s of this.sessions) {
-        try { s.ws.send(msg); } catch {}
+        if (s.userId !== userId) {
+          try { s.ws.send(msg); } catch {}
+        }
       }
 
       return new Response("ok", {
@@ -102,17 +118,24 @@ export class LocationRoom {
     }
   }
 
-  private handleWebSocket(ws: WebSocket) {
+  private handleWebSocket(ws: WebSocket, clientUserId: string | null) {
     ws.accept();
 
-    const userId = crypto.randomUUID();
+    const userId = clientUserId || crypto.randomUUID();
+
+    // If this userId already has a session, close the old one silently
+    const oldSession = this.sessions.find((s) => s.userId === userId);
+    if (oldSession) {
+      try { oldSession.ws.close(1000, "replaced"); } catch {}
+      this.sessions = this.sessions.filter((s) => s !== oldSession);
+    }
+
     const session: UserSession = { ws, userId, name: "anonymous" };
     this.sessions.push(session);
 
-    // Send userId to the connecting client
+    // Confirm userId to client
     ws.send(JSON.stringify({ type: "welcome", userId }));
 
-    // Send current users count
     this.broadcastUserCount();
 
     // Send existing users' last locations to the new client
