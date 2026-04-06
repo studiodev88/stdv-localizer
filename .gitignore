@@ -1,0 +1,5 @@
+node_modules/
+*.apk
+app/android/
+app/ios/
+app/.expo/
